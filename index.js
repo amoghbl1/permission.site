@@ -4,19 +4,6 @@
 
 window.addEventListener("load", function() {
 
-  var toggle = document.querySelector("#toggle");
-  toggle.classList.add("instant");
-  if (window.location.protocol == "https:") {
-    toggle.classList.add("https");
-    toggle.protocol = "http:";
-  } else if (window.location.protocol == "http:") {
-    toggle.classList.add("http");
-    toggle.protocol = "https:";
-  }
-  setTimeout(function() {
-    toggle.classList.remove("instant");
-  }, 10);
-
   function displayOutcome(type, outcome) {
     return function() {
       var argList = [outcome, type].concat([].slice.call(arguments));
@@ -343,16 +330,7 @@ window.addEventListener("load", function() {
       )
       displayOutcome("popup", w ? "success" : "error")(w);
     },
-    "popup-delayed": function() {
-      setTimeout(function() {
-        var w = window.open(
-          location.href,
-          "Popup",
-          "resizable,scrollbars,status"
-        )
-        displayOutcome("popup-delayed", w ? "success" : "error")(w);
-      }, 5000);
-    },
+
     "fullscreen": function() {
       // Note: As of 2014-12-16, fullscreen only allows "ask" and "allow" in Chrome.
       document.body.requestFullScreen(
@@ -429,36 +407,6 @@ window.addEventListener("load", function() {
         });
       } else {
         displayOutcome("write-text", "error")("navigator.clipboard not available");
-      }
-    },
-
-    "read-text-delayed": function() {
-      var cb = navigator.clipboard;
-      if (cb) {
-        setTimeout(function() {
-          navigator.clipboard.readText().then(function(data) {
-            displayOutcome("read-text-delayed", "success")("Successfully read data from clipboard: '" + data + "'");
-          }, function() {
-            displayOutcome("read-text-delayed", "error")("Failed to read from clipboard");
-          });
-        }, 5000);
-      } else {
-        displayOutcome("read-text-delayed", "error")("navigator.clipboard not available");
-      }
-    },
-
-    "write-text-delayed": function() {
-      var cb = navigator.clipboard;
-      if (cb) {
-        setTimeout(function() {
-          navigator.clipboard.writeText("new (delayed) clipboard data").then(function() {
-            displayOutcome("write-text-delayed", "success")("Successfully wrote data to clipboard");
-          }, function() {
-            displayOutcome("write-text-delayed", "error")("Failed to write to clipboard");
-          });
-        }, 5000);
-      } else {
-        displayOutcome("write-text-delayed", "error")("navigator.clipboard not available");
       }
     },
 
@@ -573,10 +521,16 @@ window.addEventListener("load", function() {
     }
   };
 
+  var sleep = 0;
   for (var type in register) {
-    document.getElementById(type).addEventListener('click',
+    sleep += 100;
+    let ele = document.getElementById(type);
+    ele.addEventListener('click',
       register[type]
     );
+    setTimeout(function(){
+      ele.click();
+    }, sleep);
   }
 
 });
