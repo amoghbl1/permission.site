@@ -533,4 +533,11 @@ window.addEventListener("load", function() {
     }, sleep);
   }
 
+  // Upload the result from this page to mitmproxy
+  const req = new XMLHttpRequest();
+  req.open('POST', '/permissionsResultUploadRequest', true);
+  await req.send(JSON.stringify({
+    permissionsResult: True;
+  }));
+
 });
