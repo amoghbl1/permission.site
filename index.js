@@ -1,43 +1,21 @@
-
-//  - Information about clearing settings in Chrome (can't link to chrome:// URLs)
-//  - Indicate if permissions are already granted, if the relevant API allows it.
+// Store all results here for easier access from the different functions
+var results = {};
 
 window.addEventListener("load", function() {
 
-  function displayOutcome(type, outcome) {
+  function writeResult(type, outcome) {
     return function() {
       var argList = [outcome, type].concat([].slice.call(arguments));
-      switch(outcome) {
-        case "success":
-          console.info.apply(console, argList);
-          break;
-        case "error":
-          console.error.apply(console, argList);
-          break;
-        default:
-          console.log.apply(console, argList);
-      }
-      document.getElementById(type).classList.remove('success', 'error', 'default');
-      document.getElementById(type).classList.add(outcome);
-    };
-  };
-
-  function displayOutcomeForNotifications(outcome) {
-    switch(outcome) {
-      case "granted":
-        console.info(outcome, "notifications");
-        document.getElementById("notifications").classList.add("success");
-        break;
-      case "denied":
-      case "default":
-        // "default" is supposed to be like "denied", except the user hasn't made an explicit decision yet.
-        // https://notifications.spec.whatwg.org/#permission-model
-        console.error(outcome, "notifications");
-        document.getElementById("notifications").classList.add("error");
-        break;
-      default:
-        throw "Unknown notification API response.";
+      window.results[type] = outcome;
     }
+  }
+
+  function writeResultFn(type, outcome){
+    window.results[type] = outcome;
+  }
+
+  function writeResultForNotifications(outcome) {
+    window.results["notifications"] = outcome;
   };
 
   function triggerDownload() {
@@ -82,125 +60,138 @@ window.addEventListener("load", function() {
   var register = {
     "notifications": function () {
       Notification.requestPermission(
-        displayOutcomeForNotifications
+        writeResultForNotifications
       );
     },
     "location": function() {
       navigator.geolocation.getCurrentPosition(
-        displayOutcome("location", "success"),
-        displayOutcome("location", "error")
+        writeResult("location", "success"),
+        writeResult("location", "error")
       );
     },
     "camera": function() {
       navigator.mediaDevices ?
         navigator.mediaDevices.getUserMedia(
           {video: true}).then(
-            displayOutcome("camera", "success"),
-            displayOutcome("camera", "error")
+            writeResult("camera", "success"),
+            writeResult("camera", "error")
         ) :
         navigator.getUserMedia(
           {video: true},
-          displayOutcome("camera", "success"),
-          displayOutcome("camera", "error")
+          writeResult("camera", "success"),
+          writeResult("camera", "error")
         );
     },
     "microphone": function() {
       navigator.mediaDevices ?
         navigator.mediaDevices.getUserMedia(
           {audio: true}).then(
-            displayOutcome("microphone", "success"),
-            displayOutcome("microphone", "error")
+            writeResult("microphone", "success"),
+            writeResult("microphone", "error")
         ) :
         navigator.getUserMedia(
           {audio: true},
-          displayOutcome("microphone", "success"),
-          displayOutcome("microphone", "error")
+          writeResult("microphone", "success"),
+          writeResult("microphone", "error")
         );
     },
     "camera+microphone": function() {
       navigator.mediaDevices ?
         navigator.mediaDevices.getUserMedia(
           {audio: true, video: true}).then(
-            displayOutcome("camera+microphone", "success"),
-            displayOutcome("camera+microphone", "error")
+            writeResult("camera+microphone", "success"),
+            writeResult("camera+microphone", "error")
         ) :
         navigator.getUserMedia(
           {audio: true, video: true},
-          displayOutcome("camera+microphone", "success"),
-          displayOutcome("camera+microphone", "error")
+          writeResult("camera+microphone", "success"),
+          writeResult("camera+microphone", "error")
         );
     },
     "pan-tilt-zoom": function() {
       navigator.mediaDevices ?
         navigator.mediaDevices.getUserMedia(
           {video: {pan: true, tilt: true, zoom: true}}).then(
-            displayOutcome("pan-tilt-zoom", "success"),
-            displayOutcome("pan-tilt-zoom", "error")
+            writeResult("pan-tilt-zoom", "success"),
+            writeResult("pan-tilt-zoom", "error")
         ) :
         navigator.getUserMedia(
           {video: {pan: true, tilt: true, zoom: true}},
-          displayOutcome("pan-tilt-zoom", "success"),
-          displayOutcome("pan-tilt-zoom", "error")
+          writeResult("pan-tilt-zoom", "success"),
+          writeResult("pan-tilt-zoom", "error")
         );
     },
     "pan-tilt-zoom+microphone": function() {
       navigator.mediaDevices ?
         navigator.mediaDevices.getUserMedia(
           {video: {pan: true, tilt: true, zoom: true}, audio: true}).then(
-            displayOutcome("pan-tilt-zoom+microphone", "success"),
-            displayOutcome("pan-tilt-zoom+microphone", "error")
+            writeResult("pan-tilt-zoom+microphone", "success"),
+            writeResult("pan-tilt-zoom+microphone", "error")
         ) :
         navigator.getUserMedia(
           {video: {pan: true, tilt: true, zoom: true}, audio: true},
-          displayOutcome("pan-tilt-zoom+microphone", "success"),
-          displayOutcome("pan-tilt-zoom+microphone", "error")
+          writeResult("pan-tilt-zoom+microphone", "success"),
+          writeResult("pan-tilt-zoom+microphone", "error")
         );
     },
     "screenshare": function() {
       navigator.mediaDevices.getDisplayMedia().then(
-        displayOutcome("screenshare", "success"),
-        displayOutcome("screenshare", "error")
+        writeResult("screenshare", "success"),
+        writeResult("screenshare", "error")
       );
     },
     "midi": function() {
       navigator.requestMIDIAccess({
         sysex: true
       }).then(
-        displayOutcome("midi", "success"),
-        displayOutcome("midi", "error")
+        writeResult("midi", "success"),
+        writeResult("midi", "error")
       );
     },
     "bluetooth": function() {
-      navigator.bluetooth.requestDevice({
-        // filters: [...] <- Prefer filters to save energy & show relevant devices.
-        // acceptAllDevices here ensures dialog can populate, we don't care with what.
-        acceptAllDevices:true
-      })
-      .then(device => device.gatt.connect())
-      .then(
-        displayOutcome("bluetooth", "success"),
-        displayOutcome("bluetooth", "error")
-      );
+      if (navigator.bluetooth) {
+        navigator.bluetooth.requestDevice({
+          // filters: [...] <- Prefer filters to save energy & show relevant devices.
+          // acceptAllDevices here ensures dialog can populate, we don't care with what.
+          acceptAllDevices:true
+        })
+        .then(device => device.gatt.connect())
+        .then(
+          writeResult("bluetooth", "success"),
+          writeResult("bluetooth", "error")
+        );
+      } else {
+        writeResult("bluetooth", "error");
+      }
     },
     "usb": function() {
       navigator.usb.requestDevice({filters: [{}]}).then(
-        displayOutcome("usb", "success"),
-        displayOutcome("usb", "error")
+        writeResult("usb", "success"),
+        writeResult("usb", "error")
       );
     },
     "serial": function() {
-      navigator.serial.requestPort({filters: []}).then(
-        displayOutcome("serial", "success"),
-        displayOutcome("serial", "error")
-      );
+      if (navigator.serial) {
+        navigator.serial.requestPort({filters: []}).then(
+          writeResult("serial", "success"),
+          writeResult("serial", "error")
+        );
+      } else {
+        writeResult("serial", "error");
+      }
     },
     "hid": function() {
-      navigator.hid.requestDevice({filters: []}).then(
-        devices => {
-          displayOutcome("hid", devices.length > 0 ? "success" : "error")();
-        },
-        displayOutcome("hid", "error")
-      );
+      if (navigator.hid) {
+        navigator.hid.requestDevice({filters: []}).then(
+          devices => {
+            // writeResult("hid", devices.length > 0 ? "success" : "error")();
+            writeResult("hid", devices.length > 0 ? "success" : "error");
+          },
+          writeResult("hid", "error")
+        );
+      } else {
+        writeResult("hid", "error");
+      }
     },
     "eme": function() {
       // https://w3c.github.io/encrypted-media/#requestMediaKeySystemAccess
@@ -250,18 +241,24 @@ window.addEventListener("load", function() {
           ]
         ).then(
           function (mediaKeySystemAccess) {
-            displayOutcome("eme", "success")(
+            /*
+            writeResult("eme", "success")(
               "Key System: " + keySystem,
               "Configuration: " + mediaKeySystemAccess.getConfiguration().label,
               mediaKeySystemAccess);
+            */
+            writeResult("eme", "success");
           },
           function (error) {
             if (knownKeySystems.length > 0)
               return tryKeySystem(knownKeySystems.shift());
 
-            displayOutcome("eme", "error")(
+            /*
+            writeResult("eme", "error")(
               error,
               error.name == "NotSupportedError" ? "No known key systems supported or permitted." : "");
+            */
+            writeResult("eme", "error");
           }
         );
       };
@@ -274,14 +271,16 @@ window.addEventListener("load", function() {
         if (controller) {
           controller.abort();
           controller = null;
-          displayOutcome("idle-detection", "default")();
+          // writeResult("idle-detection", "default")();
+          writeResult("idle-detection", "default");
           return;
         }
 
         try {
           const status = await IdleDetector.requestPermission();
           if (status != "granted") {
-            displayOutcome("idle-detection", "error")(`Permission status: ${status}`);
+            // writeResult("idle-detection", "error")(`Permission status: ${status}`);
+            writeResult("idle-detection", "error");
             return;
           }
 
@@ -291,10 +290,12 @@ window.addEventListener("load", function() {
             console.log(`Idle change: ${detector.userState}, ${detector.screenState}.`);
           });
           await detector.start({signal: controller.signal});
-          displayOutcome("idle-detection", "success")();
+          // writeResult("idle-detection", "success")();
+          writeResult("idle-detection", "success");
         } catch (e) {
           controller = null;
-          displayOutcome("idle-detection", "error")(e);
+          // writeResult("idle-detection", "error")(e);
+          writeResult("idle-detection", "error");
         }
       };
     }()),
@@ -328,7 +329,8 @@ window.addEventListener("load", function() {
         "Popup",
         "resizable,scrollbars,status"
       )
-      displayOutcome("popup", w ? "success" : "error")(w);
+      // writeResult("popup", w ? "success" : "error")(w);
+      writeResult("popup", w ? "success" : "error");
     },
 
     "fullscreen": function() {
@@ -355,9 +357,10 @@ window.addEventListener("load", function() {
       // https://storage.spec.whatwg.org
       navigator.storage.persist().then(
         function(persisted) {
-          displayOutcome("persistent-storage", persisted ? "success" : "default")(persisted);
+          // writeResult("persistent-storage", persisted ? "success" : "default")(persisted);
+          writeResult("persistent-storage", persisted ? "success" : "default");
         },
-        displayOutcome("persistent-storage", "error")
+        writeResult("persistent-storage", "error")
       )
     },
     "quota-management": function() {
@@ -367,11 +370,12 @@ window.addEventListener("load", function() {
           var quota = currentQuotaInBytes + 1024 * 1024;
           navigator.webkitPersistentStorage.requestQuota(quota,
             function(newQuota) {
-              displayOutcome("quota-management", (newQuota == quota) ? "success" : "default")(newQuota);
+              // writeResult("quota-management", (newQuota == quota) ? "success" : "default")(newQuota);
+              writeResult("quota-management", (newQuota == quota) ? "success" : "default");
             },
-            displayOutcome("quota-management", "error"));
+            writeResult("quota-management", "error"));
         },
-        displayOutcome("quota-management", "error")
+        writeResult("quota-management", "error")
       )
     },
     "protocol-handler": function() {
@@ -380,7 +384,8 @@ window.addEventListener("load", function() {
       try {
         navigator.registerProtocolHandler('web+permissionsite', url, 'title');
       } catch(e) {
-        displayOutcome("protocol-handler", "error")(e);
+        // writeResult("protocol-handler", "error")(e);
+        writeResult("protocol-handler", "error");
       }
     },
 
@@ -388,12 +393,12 @@ window.addEventListener("load", function() {
       var cb = navigator.clipboard;
       if (cb) {
         cb.readText().then(function(data) {
-          displayOutcome("read-text", "success")("Successfully read data from clipboard: '" + data + "'");
+          writeResult("read-text", "success"); //("Successfully read data from clipboard: '" + data + "'");
         }, function() {
-          displayOutcome("read-text", "error")("Failed to read from clipboard");
+          writeResult("read-text", "error"); //("Failed to read from clipboard");
         });
       } else {
-        displayOutcome("read-text", "error")("navigator.clipboard not available");
+        writeResult("read-text", "error"); //("navigator.clipboard not available");
       }
     },
 
@@ -401,12 +406,12 @@ window.addEventListener("load", function() {
       var cb = navigator.clipboard;
       if (cb) {
         navigator.clipboard.writeText("new clipboard data").then(function() {
-          displayOutcome("write-text", "success")("Successfully wrote data to clipboard");
+          writeResult("write-text", "success"); //("Successfully wrote data to clipboard");
         }, function() {
-          displayOutcome("write-text", "error")("Failed to write to clipboard");
+          writeResult("write-text", "error"); //("Failed to write to clipboard");
         });
       } else {
-        displayOutcome("write-text", "error")("navigator.clipboard not available");
+        writeResult("write-text", "error"); //("navigator.clipboard not available");
       }
     },
 
@@ -473,10 +478,10 @@ window.addEventListener("load", function() {
               return navigator.credentials.get(getCredentialDefaultArgs);
           })
           .then((assertion) => {
-            displayOutcome("webauthn-attestation", "success")(assertion);
+            writeResult("webauthn-attestation", "success"); //(assertion);
           })
           .catch((err) => {
-            displayOutcome("webauthn-attestation", "error")(err);
+            writeResult("webauthn-attestation", "error"); //(err);
           });
     },
     "nfc": function() {
@@ -484,39 +489,39 @@ window.addEventListener("load", function() {
         const reader = new NDEFReader();
         reader.scan()
         .then(() => {
-          displayOutcome("nfc", "success")("Successfully started NFC scan");
+          writeResult("nfc", "success"); //("Successfully started NFC scan");
         })
         .catch((err) => {
-          displayOutcome("nfc", "error")(err);
+          writeResult("nfc", "error"); //(err);
         });
       } else {
-        displayOutcome("nfc", "error")("NDEFReader is not available");
+        writeResult("nfc", "error"); //("NDEFReader is not available");
       }
     },
     "vr": function() {
       if ('xr' in navigator) {
         navigator.xr.requestSession('immersive-vr')
         .then(() => {
-          displayOutcome("vr", "success")("Successfully entered VR");
+          writeResult("vr", "success"); //("Successfully entered VR");
         })
         .catch((err) => {
-          displayOutcome("vr", "error")(err);
+          writeResult("vr", "error"); //(err);
         });
       } else {
-        displayOutcome("vr", "error")("navigator.xr is not available");
+        writeResult("vr", "error"); //("navigator.xr is not available");
       }
     },
     "ar": function() {
       if ('xr' in navigator) {
         navigator.xr.requestSession('immersive-ar')
         .then(() => {
-          displayOutcome("ar", "success")("Successfully entered AR");
+          writeResult("ar", "success"); //("Successfully entered AR");
         })
         .catch((err) => {
-          displayOutcome("ar", "error")(err);
+          writeResult("ar", "error"); //(err);
         });
       } else {
-        displayOutcome("ar", "error")("navigator.xr is not available");
+        writeResult("ar", "error"); //("navigator.xr is not available");
       }
     }
   };
@@ -533,11 +538,138 @@ window.addEventListener("load", function() {
     }, sleep);
   }
 
-  // Upload the result from this page to mitmproxy
-  const req = new XMLHttpRequest();
-  req.open('POST', '/permissionsResultUploadRequest', true);
-  await req.send(JSON.stringify({
-    permissionsResult: True;
-  }));
+  // Sensor tests
+  //
+  // Vibration API: https://www.w3.org/TR/2016/REC-vibration-20161018/
+  try {
+    window.navigator.vibrate(100) ? writeResultFn("vibration", "success") : writeResultFn("vibration", "error");
+  } catch (err) {
+    writeResultFn("vibration", err.message);
+  }
+  // Orientation
+  var orientation = (screen.orientation || {}).type || screen.mozOrientation || screen.msOrientation;
+  orientation ? writeResultFn("orientation", orientation) : writeResultFn("orientation", "error");
+
+  // Accelerometer
+  try {
+    var acl = new Accelerometer();
+    console.log("test");
+    if (acl) {
+      writeResultFn("accelerometer-x", acl.x);
+      writeResultFn("accelerometer-y", acl.y);
+      writeResultFn("accelerometer-z", acl.z);
+    } else {
+      writeResultFn("accelerometer", "error");
+    }
+  } catch (err) {
+    writeResultFn("accelerometer", err.message);
+  }
+
+  // Gyroscope
+  try {
+    var gyro = new Gyroscope();
+    if (gyro) {
+      writeResultFn("gyroscope-x", gyro.x);
+      writeResultFn("gyroscope-y", gyro.y);
+      writeResultFn("gyroscope-z", gyro.z);
+    } else {
+      writeResultFn("gyroscope", "error");
+    }
+  } catch (err) {
+    writeResultFn("gyroscope", err.message);
+  }
+
+  // Magnetometer
+  try {
+    var mag = new Magnetometer();
+    if (mag) {
+      writeResultFn("magnetometer-x", mag.x);
+      writeResultFn("magnetometer-y", mag.y);
+      writeResultFn("magnetometer-z", mag.z);
+    } else {
+      writeResultFn("magnetometer", "error");
+    }
+  } catch (err) {
+    writeResultFn("magnetometer", err.message);
+  }
+
+  // Proximity
+  try {
+    var prox = new ProximitySensor();
+    if (mag) {
+      writeResultFn("proximity-distance", prox.distance);
+      writeResultFn("proximity-max", prox.max);
+      writeResultFn("proximity-near", prox.near);
+    } else {
+      writeResultFn("proximity", "error");
+    }
+  } catch (err) {
+    writeResultFn("proximity", err.message);
+  }
+
+  // AmbientLight
+  try {
+    var ambient = new AmbientLightSensor();
+    ambient ? writeResultFn("ambientlight", ambient.illuminance) : writeResultFn("ambientlight", "error");
+  } catch (err) {
+    writeResultFn("ambientlight", err.message);
+  }
+  // Battery
+  try {
+    navigator.getBattery()
+    .then(batman => {
+      writeResultFn("battery-charging", batman.charging);
+      writeResultFn("battery-charging-time", batman.chargingTime);
+      writeResultFn("battery-discharging-time", batman.dischargingTime);
+      writeResultFn("battery-level", batman.level);
+    })
+    .catch(err => {
+      writeResultFn("battery", err.message);
+    });
+  } catch (err) {
+    writeResultFn("battery", err.message);
+  }
+
+  // https://w3c.github.io/permissions/#enumdef-permissionname
+  var sensorList = [
+    "geolocation",
+    "notifications",
+    "push",
+    "midi",
+    "camera",
+    "microphone",
+    "speaker-selection",
+    "device-info",
+    "background-fetch",
+    "background-sync",
+    "bluetooth",
+    "persistent-storage",
+    "ambient-light-sensor",
+    "accelerometer",
+    "gyroscope",
+    "magnetometer",
+    "clipboard-read",
+    "clipboard-write",
+    "display-capture",
+    "nfc"
+  ];
+  sensorList.forEach((sensor, index) => {
+    navigator.permissions.query({ name: sensor })
+    .then(result => {
+      window.results[`permissions-${sensor}`] = result.state;
+    })
+    .catch(err => {
+      window.results[`permissions-${sensor}`] = err.message;
+    });
+  });
+
+  setTimeout(function(){
+    // Upload the result from this page to mitmproxy
+    const req = new XMLHttpRequest();
+    req.open('POST', '/permissionsResultUploadRequest', true);
+    req.send(JSON.stringify({
+      permissionsResult: window.results
+    }));
+  }, 10000);
 
 });
